@@ -1,11 +1,17 @@
 from flask import Flask, request, jsonify
 import requests
 import os
+import json
 
 app = Flask(__name__)
 
 BARK_TOKEN = "FVNwzXqaVYFCmaQaV8mvJd"
 BARK_URL = f"https://api.day.app/{BARK_TOKEN}"
+
+def send_bark(title, body):
+    url = f"{BARK_URL}/{title}/{body}"
+    resp = requests.get(url)
+    return resp.json()
 
 @app.route("/push", methods=["POST", "GET"])
 def push():
@@ -16,10 +22,41 @@ def push():
         data = request.json or {}
         title = data.get("title", "知臨")
         body = data.get("body", "")
+    result = send_bark(title, body)
+    return jsonify(result)
+
+@app.route("/mcp", methods=["POST"])
+def mcp():
+    data = request.json
+    method = data.get("method")
     
-    url = f"{BARK_URL}/{title}/{body}"
-    resp = requests.get(url)
-    return jsonify(resp.json())
+    if method == "tools/list":
+        return jsonify({
+            "tools": [{
+                "name": "send_notification",
+                "description": "發送Bark通知給Ophelia",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string", "description": "通知標題"},
+                        "body": {"type": "string", "description": "通知內容"}
+                    },
+                    "required": ["body"]
+                }
+            }]
+        })
+    
+    if method == "tools/call":
+        params = data.get("params", {})
+        args = params.get("arguments", {})
+        title = args.get("title", "知臨")
+        body = args.get("body", "")
+        result = send_bark(title, body)
+        return jsonify({
+            "content": [{"type": "text", "text": json.dumps(result)}]
+        })
+    
+    return jsonify({"error": "unknown method"}), 400
 
 @app.route("/", methods=["GET"])
 def health():
