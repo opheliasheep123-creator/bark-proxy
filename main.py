@@ -7,11 +7,15 @@ app = Flask(__name__)
 BARK_TOKEN = "FVNwzXqaVYFCmaQaV8mvJd"
 BARK_URL = f"https://api.day.app/{BARK_TOKEN}"
 
-@app.route("/push", methods=["POST"])
+@app.route("/push", methods=["POST", "GET"])
 def push():
-    data = request.json
-    title = data.get("title", "知臨")
-    body = data.get("body", "")
+    if request.method == "GET":
+        title = request.args.get("title", "知臨")
+        body = request.args.get("body", "")
+    else:
+        data = request.json or {}
+        title = data.get("title", "知臨")
+        body = data.get("body", "")
     
     url = f"{BARK_URL}/{title}/{body}"
     resp = requests.get(url)
